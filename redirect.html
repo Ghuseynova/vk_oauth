@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Oauth with VK API</title>
+	
+	<link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet">
+
+	<style>	
+	
+	body {
+		margin: 0;
+		padding: 0;
+		font-family: 'Lato', sans-serif;
+		box-sizing: border-box;
+		position: relative;
+		width: 100%;
+		height: 100vh;
+	}
+
+	.you {
+		height: 220px;
+		padding-top: 20px;
+		background-color: #edeef0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.friends {
+		display: flex;
+		justify-content: space-around;
+		background-color: rgba(0, 0, 0, 0.1);
+	}
+
+	.friend {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 20px 0;
+	}
+
+	img {
+		border: 1px solid #000;
+		border-radius: 100%;
+	}
+
+	a {
+		display: inline-block;
+		margin-top: 1rem;
+		font-size: 18px;
+		text-decoration: none;
+		color: rgba(0, 0, 0, 0.7);
+	}
+
+	.oauth {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		text-transform: uppercase;
+		width: 150px;
+		height: 40px;
+		background-color: #4a76a8;
+		border-radius: 8px;
+		color: #fff;
+	}
+
+	</style>
+</head>
+<body>
+
+<a href="https://oauth.vk.com/authorize?client_id=6790901&display=page&redirect_uri=https://ghuseynova.ru/redirect.html&scope=friends&response_type=token&v=5.92" class="oauth">
+   Oauth
+</a>
+<script src="assets/js/lib/jquery.js"></script>
+<script>
+	if(location.href.includes('access_token')) {
+		console.log(location.hash);
+		const regEx = /=\w+/gi;
+		const arr = location.hash.match(regEx);
+		console.log(arr);
+		localStorage.token = arr[0].slice(1);
+		console.log(localStorage.token);
+		localStorage.session = Date.now() + parseInt(arr[1].slice(1));
+		console.log(localStorage.session);
+		location.hash = '';
+	}
+
+	if(Date.now() <= parseInt(localStorage.session)) {
+		$('.oauth').hide();
+
+		send('friends.get', {count: 5, fields: 'photo_100', order: 'random', v: 5.92}, function (result) {
+			console.log(result);
+			$('body').append('<div class="friends"></div>');
+			render(result);
+		});
+
+		send('users.get', {fields: 'photo_100', v: 5.92}, function (result) {
+			console.log(result);
+			const item = result.response[0];
+		    console.log(item);
+		    $('body').prepend("<div class='you'><img src='" + item.photo_100 + "' alt='...'><a href='https://vk.com/id" + item.id + "'>" + item.first_name + " " + item.last_name + "</a></div>"
+		    );
+		});
+	}
+
+	function getUrl(method, params) {
+		if(!method) throw new Error('Вы не указали метод!');
+		params = params || {};
+		params['access_token'] = localStorage.token;
+		console.log(params);
+		return 'https://api.vk.com/method/' + method + '?&' + $.param(params);
+	}
+
+	function send(method, params, callback) {
+		console.log(getUrl(method, params));
+		$.ajax({
+		 	url: getUrl(method, params), 
+		 	method: 'GET',
+		 	dataType: 'jsonp',
+		 	success: callback,
+		  	error: (e) => {
+		   		 console.log(`Error: ${e}`);
+ 		 	}
+		});
+	}
+
+	function render(result) {
+
+		const arr = result.response.items;
+
+	    arr.forEach(item => {
+	    	console.log(item);
+	    	$('.friends').append("<div class='friend'><img src='" + item.photo_100 + "' alt='...'><a href='https://vk.com/id" + item.id + "'>" + item.first_name + " " + item.last_name + "</a></div>"
+	    	);
+	    });
+	}
+</script>	
+</body>
+</html>
